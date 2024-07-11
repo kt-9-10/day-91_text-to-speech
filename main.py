@@ -1,35 +1,67 @@
-from google.cloud import texttospeech
+from pdfminer.high_level import extract_text
+import requests
+import json
+import pyaudio
+import wave
 
 
-def text_to_mp3(text):
-    # Instantiates a client
-    client = texttospeech.TextToSpeechClient()
+def vvox_test(text):
+    # エンジン起動時に表示されているIP、portを指定
+    host = "127.0.0.1"
+    port = 50021
 
-    # Set the text input to be synthesized
-    synthesis_input = texttospeech.SynthesisInput(text=text)
-
-    # Build the voice request, select the language code ("en-US") and the ssml
-    # voice gender ("neutral")
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="ja-JP", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+    # 音声化する文言と話者を指定(3で標準ずんだもんになる)
+    params = (
+        ('text', text),
+        ('speaker', 3),
     )
 
-    # Select the type of audio file you want returned
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+    # 音声合成用のクエリ作成
+    query = requests.post(
+        f'http://{host}:{port}/audio_query',
+        params=params
     )
 
-    # Perform the text-to-speech request on the text input with the selected
-    # voice parameters and audio file type
-    response = client.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
+    # 音声合成を実施
+    synthesis = requests.post(
+        f'http://{host}:{port}/synthesis',
+        headers={"Content-Type": "application/json"},
+        params=params,
+        data=json.dumps(query.json())
     )
 
-    # The response's audio_content is binary.
-    with open("output.mp3", "wb") as out:
-        # Write the response to the output file.
-        out.write(response.audio_content)
-        print('Audio content written to file "output.mp3"')
+    print(synthesis.status_code)
+    print(type(synthesis.content))
+
+    return synthesis
+
+# # 再生処理
+    # voice = synthesis.content
+    # pya = pyaudio.PyAudio()
+    #
+    # # サンプリングレートが24000以外だとずんだもんが高音になったり低音になったりする
+    # stream = pya.open(format=pyaudio.paInt16,
+    #                   channels=1,
+    #                   rate=24000,
+    #                   output=True)
+    #
+    # stream.write(voice)
+    # stream.stop_stream()
+    # stream.close()
+    # pya.terminate()
 
 
-text_to_mp3('Hello, World!')
+if __name__ == "__main__":
+    text = extract_text("78e31754-85eb-44fa-b938-a0dded1e6be8.pdf")
+    # clean_text = text.replace("\n", "").replace("·", "").replace("―", "")
+    # print(clean_text)
+    text = "未来から来た、猫型ロボットなのだ"
+    voice_data = vvox_test(text)
+
+    # データをファイルとして出力
+    output_file = "test_01.wav"
+    with wave.open(output_file, "w") as wf:
+        wf.setnchannels(2)  # チャンネル数の設定 (1:mono, 2:stereo)
+        wf.setsampwidth(2)  # サンプル幅の設定 (2bytes = 16bit)
+        wf.setframerate(12000)  # サンプリングレートの設定
+        wf.writeframes(voice_data.content)  # ステレオデータを書き込み
