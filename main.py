@@ -1,12 +1,10 @@
-from pdfminer.high_level import extract_text
 import pypdfium2 as pdfium
 import requests
 import json
-import pyaudio
 import wave
 
 
-def vvox_test(text):
+def str_to_wav(text):
     # エンジン起動時に表示されているIP、portを指定
     host = "127.0.0.1"
     port = 50021
@@ -37,21 +35,6 @@ def vvox_test(text):
 
     return synthesis
 
-# # 再生処理
-    # voice = synthesis.content
-    # pya = pyaudio.PyAudio()
-    #
-    # # サンプリングレートが24000以外だとずんだもんが高音になったり低音になったりする
-    # stream = pya.open(format=pyaudio.paInt16,
-    #                   channels=1,
-    #                   rate=24000,
-    #                   output=True)
-    #
-    # stream.write(voice)
-    # stream.stop_stream()
-    # stream.close()
-    # pya.terminate()
-
 
 if __name__ == "__main__":
     pdf = pdfium.PdfDocument("page_5.pdf")
@@ -61,8 +44,9 @@ if __name__ == "__main__":
 
     for i in range(total_pages):
         text_page = pdf[i].get_textpage()
-        text = text_page.get_text_bounded()
-        voice_data = vvox_test(text)
+        text_content = text_page.get_text_bounded()
+
+        voice_data = str_to_wav(text_content)
 
         # データをファイルとして出力
         output_file = f"pdf_to_speech_{i+1:03}.wav"
@@ -72,4 +56,3 @@ if __name__ == "__main__":
             wf.setframerate(12000)  # サンプリングレートの設定
             wf.writeframes(voice_data.content)  # ステレオデータを書き込み
             print(f"{i+1}/{total_pages}ページが完了")
-
