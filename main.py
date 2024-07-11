@@ -37,7 +37,7 @@ def str_to_wav(text):
 
 
 if __name__ == "__main__":
-    pdf = pdfium.PdfDocument("page_5.pdf")
+    pdf = pdfium.PdfDocument("94081601_01.pdf")
 
     total_pages = len(pdf)
     print(f"全{total_pages}ページ 処理開始")
