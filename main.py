@@ -1,4 +1,5 @@
 from pdfminer.high_level import extract_text
+import pypdfium2 as pdfium
 import requests
 import json
 import pyaudio
@@ -22,6 +23,8 @@ def vvox_test(text):
         params=params
     )
 
+    print("クエリ作成 完了")
+
     # 音声合成を実施
     synthesis = requests.post(
         f'http://{host}:{port}/synthesis',
@@ -30,8 +33,7 @@ def vvox_test(text):
         data=json.dumps(query.json())
     )
 
-    print(synthesis.status_code)
-    print(type(synthesis.content))
+    print("音声合成 完了")
 
     return synthesis
 
@@ -52,16 +54,22 @@ def vvox_test(text):
 
 
 if __name__ == "__main__":
-    text = extract_text("78e31754-85eb-44fa-b938-a0dded1e6be8.pdf")
-    # clean_text = text.replace("\n", "").replace("·", "").replace("―", "")
-    # print(clean_text)
-    text = "未来から来た、猫型ロボットなのだ"
-    voice_data = vvox_test(text)
+    pdf = pdfium.PdfDocument("page_5.pdf")
 
-    # データをファイルとして出力
-    output_file = "test_01.wav"
-    with wave.open(output_file, "w") as wf:
-        wf.setnchannels(2)  # チャンネル数の設定 (1:mono, 2:stereo)
-        wf.setsampwidth(2)  # サンプル幅の設定 (2bytes = 16bit)
-        wf.setframerate(12000)  # サンプリングレートの設定
-        wf.writeframes(voice_data.content)  # ステレオデータを書き込み
+    total_pages = len(pdf)
+    print(f"全{total_pages}ページ 処理開始")
+
+    for i in range(total_pages):
+        text_page = pdf[i].get_textpage()
+        text = text_page.get_text_bounded()
+        voice_data = vvox_test(text)
+
+        # データをファイルとして出力
+        output_file = f"pdf_to_speech_{i+1:03}.wav"
+        with wave.open(output_file, "w") as wf:
+            wf.setnchannels(2)  # チャンネル数の設定 (1:mono, 2:stereo)
+            wf.setsampwidth(2)  # サンプル幅の設定 (2bytes = 16bit)
+            wf.setframerate(12000)  # サンプリングレートの設定
+            wf.writeframes(voice_data.content)  # ステレオデータを書き込み
+            print(f"{i+1}/{total_pages}ページが完了")
+
